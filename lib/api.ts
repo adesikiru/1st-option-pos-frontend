@@ -11,7 +11,10 @@ import {
   User,
 } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE = rawApiBase.endsWith('/api/v1')
+  ? rawApiBase
+  : `${rawApiBase.replace(/\/$/, '')}/api/v1`;
 
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
