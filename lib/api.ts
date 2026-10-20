@@ -96,6 +96,10 @@ export const api = {
     });
     setStoredToken(res.accessToken);
     setStoredUser(res.user);
+    // Notify Header and other components that auth state changed
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-changed'));
+    }
     return res;
   },
 
@@ -107,6 +111,7 @@ export const api = {
     setStoredToken(null);
     setStoredUser(null);
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-changed'));
       window.location.href = '/login';
     }
   },

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ShoppingCart,
   LayoutDashboard,
@@ -21,11 +21,40 @@ import { User } from '@/lib/types';
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
+  const refreshUser = useCallback(() => {
     setUser(getStoredUser());
   }, []);
+
+  useEffect(() => {
+    // Initial load
+    refreshUser();
+
+    // Listen for storage changes (cross-tab logout, or login in same tab via storage events)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'user' || e.key === 'token') {
+        refreshUser();
+      }
+    };
+
+    // Custom event dispatched after login/logout within same tab
+    const handleAuthChange = () => refreshUser();
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('auth-changed', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('auth-changed', handleAuthChange);
+    };
+  }, [refreshUser]);
+
+  // Re-read user on every pathname change (e.g., after login redirect)
+  useEffect(() => {
+    refreshUser();
+  }, [pathname, refreshUser]);
 
   if (pathname === '/login') return null;
 

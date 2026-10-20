@@ -7,10 +7,89 @@ import { Product, Category, Supplier } from '@/lib/types';
 import ProductModal from '@/components/ProductModal';
 import {
   Plus, Search, Package, AlertTriangle, Edit2, PowerOff,
-  Filter, RefreshCw, ChevronLeft, ChevronRight, X
+  Filter, RefreshCw, ChevronLeft, ChevronRight, X, AlertCircle
 } from 'lucide-react';
 
 const fmt = (n: number) => '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
+
+// Deactivate confirmation modal
+function DeactivateModal({
+  product,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  product: Product | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md animate-in slide-in-from-bottom-4">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">Deactivate Product</h2>
+          </div>
+          <button
+            onClick={onCancel}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5">
+          <p className="text-slate-700 text-sm leading-relaxed">
+            Deactivate{' '}
+            <span className="font-bold text-slate-900">&ldquo;{product.name}&rdquo;</span>?
+            <br />
+            It will no longer appear in the POS.
+          </p>
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+            You can re-activate it later by editing the product.
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-3 px-6 pb-6">
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm transition-all active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <PowerOff className="w-4 h-4" />
+            )}
+            Deactivate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -28,13 +107,18 @@ export default function ProductsPage() {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const LIMIT = 20;
 
+  // Deactivate modal state
+  const [deactivateTarget, setDeactivateTarget] = useState<Product | null>(null);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [deactivateError, setDeactivateError] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [prodRes, cats, sups] = await Promise.all([
         api.getProducts({ search, categoryId, lowStock: lowStockOnly || undefined, page, limit: LIMIT }),
         api.getCategories(),
-        api.getSuppliers(),
+        api.getSuppliers().catch(() => [] as Supplier[]), // Non-critical; some roles can't read suppliers
       ]);
       setProducts(prodRes.data);
       setTotal(prodRes.total);
@@ -55,18 +139,39 @@ export default function ProductsPage() {
 
   useEffect(() => { setPage(1); }, [search, categoryId, lowStockOnly]);
 
-  const handleDeactivate = async (product: Product) => {
-    if (!confirm(`Deactivate "${product.name}"? It will no longer appear in the POS.`)) return;
+  const handleDeactivateConfirm = async () => {
+    if (!deactivateTarget) return;
+    setDeactivateLoading(true);
+    setDeactivateError('');
     try {
-      await api.deactivateProduct(product.id);
+      await api.deactivateProduct(deactivateTarget.id);
+      setDeactivateTarget(null);
       load();
     } catch (err: any) {
-      alert(err.message);
+      setDeactivateError(err.message);
+    } finally {
+      setDeactivateLoading(false);
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Deactivate modal */}
+      <DeactivateModal
+        product={deactivateTarget}
+        onConfirm={handleDeactivateConfirm}
+        onCancel={() => { setDeactivateTarget(null); setDeactivateError(''); }}
+        loading={deactivateLoading}
+      />
+
+      {/* Deactivate error toast */}
+      {deactivateError && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-600 text-white shadow-lg text-sm">
+          <AlertCircle className="w-4 h-4" /> {deactivateError}
+          <button onClick={() => setDeactivateError('')}><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -184,7 +289,7 @@ export default function ProductsPage() {
                         </button>
                         {p.isActive && (
                           <button
-                            onClick={() => handleDeactivate(p)}
+                            onClick={() => setDeactivateTarget(p)}
                             title="Deactivate product"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                           >
