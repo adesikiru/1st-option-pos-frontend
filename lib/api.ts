@@ -142,6 +142,10 @@ export const api = {
     return request<Product>(`/products/sku/${encodeURIComponent(sku)}`);
   },
 
+  async getProductByBarcode(barcode: string): Promise<Product> {
+    return request<Product>(`/products/barcode/${encodeURIComponent(barcode.trim())}`);
+  },
+
   async createProduct(data: Partial<Product>): Promise<Product> {
     return request<Product>('/products', {
       method: 'POST',
