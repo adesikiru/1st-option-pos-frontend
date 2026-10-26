@@ -178,3 +178,124 @@ export interface DashboardMetrics {
     totalStockRetailValue: number;
   };
 }
+
+export interface InventorySummaryItem {
+  id: string;
+  name: string;
+  sku: string;
+  barcode: string | null;
+  department: string;
+  vendor: string;
+  onHandQty: number;
+  costPrice: number;
+  sellingPrice: number;
+  extCost: number;
+  extPrice: number;
+  onOrder: number;
+  minStockThreshold: number;
+  unitOfMeasurement: string;
+}
+
+export interface InventorySummaryDepartment {
+  department: string;
+  onHandQty: number;
+  extCost: number;
+  extPrice: number;
+  onOrder: number;
+  margin: number;
+  marginPercent: number;
+  products: InventorySummaryItem[];
+}
+
+export interface InventorySummaryReport {
+  departments: InventorySummaryDepartment[];
+  totals: {
+    totalProducts: number;
+    totalOnHandQty: number;
+    totalExtCost: number;
+    totalExtPrice: number;
+    totalOnOrder: number;
+    totalMargin: number;
+    overallMarginPercent: number;
+  };
+}
+
+export interface ItemSummaryRow {
+  productId: string;
+  productName: string;
+  sku: string;
+  department: string;
+  vendor: string;
+  qtySold: number;
+  extPrice: number;
+  extCost: number;
+  margin: number;
+  marginPercent: number;
+}
+
+export interface ItemSummaryReport {
+  dateFrom: string;
+  dateTo: string;
+  items: ItemSummaryRow[];
+  totals: {
+    totalQtySold: number;
+    totalExtPrice: number;
+    totalExtCost: number;
+    totalMargin: number;
+    overallMarginPercent: number;
+  };
+}
+
+export interface ProductStatistics {
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    barcode: string | null;
+    description: string | null;
+    department: string;
+    categoryId?: string;
+    vendor: string;
+    supplierId?: string;
+    unitOfMeasurement: string;
+    onHandQty: number;
+    unitCost: number;
+    unitPrice: number;
+    extCost: number;
+    extPrice: number;
+    minStockThreshold: number;
+    isActive: boolean;
+  };
+  totals: {
+    netSales: number;
+    costOfGoods: number;
+    profit: number;
+    profitMargin: number;
+    totalQtySold: number;
+  };
+  quantityIn: {
+    received: number;
+    salesReturns: number;
+    adjustments: number;
+    transfers: number;
+    total: number;
+  };
+  quantityOut: {
+    sold: number;
+    vendorReturns: number;
+    adjustments: number;
+    transfers: number;
+    total: number;
+  };
+  history: Array<{
+    id: string;
+    changeDate: string;
+    type: MovementType;
+    quantity: number;
+    previousQty: number;
+    onHandQuantity: number;
+    reason: string;
+    reference?: string;
+    changedBy: string;
+  }>;
+}

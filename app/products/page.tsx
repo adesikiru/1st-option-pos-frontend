@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getStoredToken } from '@/lib/api';
 import { Product, Category, Supplier } from '@/lib/types';
-import ProductModal from '@/components/ProductModal';
+import QuickBooksItemModal from '@/components/QuickBooksItemModal';
 import {
   Plus, Search, Package, AlertTriangle, Edit2, PowerOff,
   Filter, RefreshCw, ChevronLeft, ChevronRight, X, AlertCircle
@@ -329,7 +329,7 @@ export default function ProductsPage() {
         )}
       </div>
 
-      <ProductModal
+      <QuickBooksItemModal
         product={editProduct}
         isOpen={modalOpen}
         categories={categories}

@@ -3,10 +3,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getStoredToken, getStoredUser } from '@/lib/api';
-import { Product, StockMovement } from '@/lib/types';
+import { Category, Product, StockMovement, Supplier } from '@/lib/types';
+import QuickBooksItemModal from '@/components/QuickBooksItemModal';
 import {
   Boxes, AlertTriangle, TrendingDown, TrendingUp, RefreshCw,
-  ChevronLeft, ChevronRight, Sliders, CheckCircle2, X
+  ChevronLeft, ChevronRight, Sliders, CheckCircle2, X, ExternalLink,
 } from 'lucide-react';
 
 const fmt = (n: number) => '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
@@ -30,6 +31,12 @@ export default function InventoryPage() {
   const [movTotalPages, setMovTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // QuickBooks Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+
   // Adjustment form
   const [adjustProduct, setAdjustProduct] = useState('');
   const [adjustQty, setAdjustQty] = useState('');
@@ -45,16 +52,20 @@ export default function InventoryPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [ls, movRes, prods] = await Promise.all([
+      const [ls, movRes, prods, cats, sups] = await Promise.all([
         api.getLowStockProducts(),
         api.getMovements({ page: movPage, limit: 20 }),
         api.getProducts({ limit: 200 }),
+        api.getCategories().catch(() => []),
+        api.getSuppliers().catch(() => []),
       ]);
       setLowStock(ls);
       setMovements(movRes.data);
       setMovTotal(movRes.total);
       setMovTotalPages(movRes.totalPages);
       setAllProducts(prods.data.filter(p => p.isActive));
+      setCategories(cats);
+      setSuppliers(sups);
     } catch (err) {
       console.error(err);
     } finally {
@@ -101,9 +112,22 @@ export default function InventoryPage() {
           </h1>
           <p className="text-slate-500 text-sm mt-0.5">Track stock levels and movements</p>
         </div>
-        <button onClick={load} disabled={loading} className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (allProducts.length > 0) {
+                setEditProduct(allProducts[0]);
+                setModalOpen(true);
+              }
+            }}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow-sm transition-all active:scale-95"
+          >
+            <Boxes className="w-4 h-4" /> QuickBooks Item View
+          </button>
+          <button onClick={load} disabled={loading} className="p-2 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -117,8 +141,19 @@ export default function InventoryPage() {
             {lowStock.length === 0 ? (
               <div className="px-5 py-10 text-center text-slate-400 text-sm">All products are well stocked.</div>
             ) : lowStock.map((p) => (
-              <div key={p.id} className="px-5 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                <p className="font-semibold text-sm text-slate-800">{p.name}</p>
+              <div
+                key={p.id}
+                onClick={() => {
+                  setEditProduct(p);
+                  setModalOpen(true);
+                }}
+                className="px-5 py-3 border-b border-slate-50 last:border-0 hover:bg-amber-50/50 cursor-pointer transition-colors group"
+                title="Click to view/edit in QuickBooks view"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm text-slate-800 group-hover:text-amber-800">{p.name}</p>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 transition-colors" />
+                </div>
                 <p className="text-xs text-slate-400">{p.sku}</p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-xs text-slate-500">Min: {Number(p.minStockThreshold)} {p.unitOfMeasurement}</span>
@@ -301,6 +336,18 @@ export default function InventoryPage() {
           </div>
         )}
       </div>
+
+      <QuickBooksItemModal
+        product={editProduct}
+        isOpen={modalOpen}
+        categories={categories}
+        suppliers={suppliers}
+        onClose={() => {
+          setModalOpen(false);
+          setEditProduct(null);
+        }}
+        onSuccess={load}
+      />
     </div>
   );
 }

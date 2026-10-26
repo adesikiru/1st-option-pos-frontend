@@ -9,6 +9,9 @@ import {
   StockReceipt,
   Supplier,
   User,
+  InventorySummaryReport,
+  ItemSummaryReport,
+  ProductStatistics,
 } from './types';
 
 const rawApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
@@ -153,11 +156,15 @@ export const api = {
     });
   },
 
-  async updateProduct(id: string, data: Partial<Product>): Promise<Product> {
+  async updateProduct(id: string, data: Partial<Product> & { stockQuantity?: number }): Promise<Product> {
     return request<Product>(`/products/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+  },
+
+  async getProductStatistics(id: string): Promise<ProductStatistics> {
+    return request<ProductStatistics>(`/products/${id}/statistics`);
   },
 
   async deactivateProduct(id: string): Promise<Product> {
@@ -339,6 +346,25 @@ export const api = {
 
   async getInventoryReport(): Promise<any> {
     return request('/reports/inventory');
+  },
+
+  async getInventorySummary(): Promise<InventorySummaryReport> {
+    return request<InventorySummaryReport>('/reports/inventory-summary');
+  },
+
+  async getItemSummary(params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    categoryId?: string;
+    supplierId?: string;
+  }): Promise<ItemSummaryReport> {
+    const query = new URLSearchParams();
+    if (params?.dateFrom) query.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) query.set('dateTo', params.dateTo);
+    if (params?.categoryId) query.set('categoryId', params.categoryId);
+    if (params?.supplierId) query.set('supplierId', params.supplierId);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return request<ItemSummaryReport>(`/reports/item-summary${queryString}`);
   },
 
   // Users
